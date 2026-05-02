@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <h1>Barcode Input Simulation</h1>
+    <p>
+        Enter a product barcode to quickly find an item in the inventory.
+    </p>
+
+    <form method="POST" class="form-card">
+        <label>Barcode</label>
+        <input 
+            type="text" 
+            name="barcode" 
+            placeholder="Example: 100200300"
+            value="{{ searched_barcode }}"
+            required
+        >
+
+        <button type="submit" class="btn">Find Product</button>
+    </form>
+
+    {% if searched_barcode and product %}
+        <div class="result-card success-result">
+            <h3>Product Found</h3>
+            <p><strong>Name:</strong> {{ product["name"] }}</p>
+            <p><strong>Category:</strong> {{ product["category"] }}</p>
+            <p><strong>Quantity:</strong> {{ product["quantity"] }}</p>
+            <p><strong>Threshold:</strong> {{ product["threshold"] }}</p>
+            <p><strong>Price:</strong> {{ product["price"] }} KZT</p>
+
+            {% if product["quantity"] == 0 %}
+                <p><strong>Status:</strong> <span class="status out-stock">Out of Stock</span></p>
+            {% elif product["quantity"] < product["threshold"] %}
+                <p><strong>Status:</strong> <span class="status low-stock">Low Stock</span></p>
+            {% else %}
+                <p><strong>Status:</strong> <span class="status in-stock">In Stock</span></p>
+            {% endif %}
+        </div>
+    {% elif searched_barcode and not product %}
+        <div class="result-card error-result">
+            <h3>Product Not Found</h3>
+            <p>No product was found with barcode: <strong>{{ searched_barcode }}</strong></p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
