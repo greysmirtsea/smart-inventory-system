@@ -1,5 +1,7 @@
 # Smart Inventory Management System
 
+my id - 230103143
+
 ## Project Description
 
 Smart Inventory Management System is a web-based inventory management application designed for small businesses. The system helps users track products, manage stock quantities, identify low-stock items, and generate inventory reports.
@@ -98,5 +100,3 @@ Password: admin123
 
 ```bash
 git clone https://github.com/greysmirtsea/smart-inventory-system.git
-
-my id - 230103143
