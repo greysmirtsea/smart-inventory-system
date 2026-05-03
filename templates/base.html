@@ -10,11 +10,17 @@
     <nav class="navbar">
         <h2>Smart Inventory System</h2>
         <div>
-            <a href="/">Products</a>
-            <a href="/add">Add Product</a>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/barcode">Barcode</a>
-            <a href="/export">Export CSV</a>
+            {% if session.get("user_id") %}
+                <a href="/">Products</a>
+                <a href="/add">Add Product</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/barcode">Barcode</a>
+                <a href="/export">Export CSV</a>
+                <a href="/logout">Logout</a>
+            {% else %}
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            {% endif %}
         </div>
     </nav>
 

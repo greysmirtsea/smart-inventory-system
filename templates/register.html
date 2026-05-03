@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <h1>Create Account</h1>
+        <p>Register to access the Smart Inventory Management System.</p>
+
+        <form method="POST" class="form-card">
+            <label>Username</label>
+            <input type="text" name="username" placeholder="Enter username" required>
+
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Enter password" required>
+
+            <label>Confirm Password</label>
+            <input type="password" name="confirm_password" placeholder="Confirm password" required>
+
+            <button type="submit" class="btn">Register</button>
+        </form>
+
+        <p class="auth-link">
+            Already have an account?
+            <a href="/login">Login here</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

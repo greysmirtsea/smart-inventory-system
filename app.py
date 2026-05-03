@@ -1,7 +1,9 @@
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, flash, Response       
 import csv
 import io
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, Response, session
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = "inventory_secret_key"
@@ -29,12 +31,97 @@ def init_db():
             barcode TEXT UNIQUE
         )
     """)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL
+        )
+    """)
 
     connection.commit()
     connection.close()
 
+def login_required(route_function):
+    @wraps(route_function)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Please log in to access the inventory system.", "error")
+            return redirect(url_for("login"))
+        return route_function(*args, **kwargs)
+    return wrapper
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form["username"].strip()
+        password = request.form["password"].strip()
+        confirm_password = request.form["confirm_password"].strip()
+
+        if not username or not password or not confirm_password:
+            flash("All fields are required.", "error")
+            return redirect(url_for("register"))
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return redirect(url_for("register"))
+
+        hashed_password = generate_password_hash(password)
+
+        connection = get_db_connection()
+
+        try:
+            connection.execute(
+                "INSERT INTO users (username, password) VALUES (?, ?)",
+                (username, hashed_password)
+            )
+            connection.commit()
+            flash("Registration successful. Please log in.", "success")
+            return redirect(url_for("login"))
+
+        except sqlite3.IntegrityError:
+            flash("Username already exists. Please choose another username.", "error")
+            return redirect(url_for("register"))
+
+        finally:
+            connection.close()
+
+    return render_template("register.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"].strip()
+        password = request.form["password"].strip()
+
+        connection = get_db_connection()
+        user = connection.execute(
+            "SELECT * FROM users WHERE username = ?",
+            (username,)
+        ).fetchone()
+        connection.close()
+
+        if user and check_password_hash(user["password"], password):
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            flash("Login successful.", "success")
+            return redirect(url_for("index"))
+
+        flash("Invalid username or password.", "error")
+        return redirect(url_for("login"))
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out.", "success")
+    return redirect(url_for("login"))
 
 @app.route("/")
+@login_required
 def index():
     search_query = request.args.get("search", "")
 
@@ -64,6 +151,7 @@ def index():
 
 
 @app.route("/add", methods=["GET", "POST"])
+@login_required
 def add_product():
     if request.method == "POST":
         name = request.form["name"].strip()
@@ -100,6 +188,7 @@ def add_product():
 
 
 @app.route("/edit/<int:product_id>", methods=["GET", "POST"])
+@login_required
 def edit_product(product_id):
     connection = get_db_connection()
     product = connection.execute(
@@ -147,6 +236,7 @@ def edit_product(product_id):
 
 
 @app.route("/delete/<int:product_id>", methods=["POST"])
+@login_required
 def delete_product(product_id):
     connection = get_db_connection()
     connection.execute("DELETE FROM products WHERE id = ?", (product_id,))
@@ -158,6 +248,7 @@ def delete_product(product_id):
 
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
     connection = get_db_connection()
 
@@ -203,6 +294,7 @@ def dashboard():
 
 
 @app.route("/barcode", methods=["GET", "POST"])
+@login_required
 def barcode_lookup():
     product = None
     searched_barcode = ""
@@ -224,6 +316,7 @@ def barcode_lookup():
     )
 
 @app.route("/update_stock/<int:product_id>", methods=["POST"])
+@login_required
 def update_stock(product_id):
     change_amount = int(request.form["change_amount"])
 
@@ -258,6 +351,7 @@ def update_stock(product_id):
     return redirect(url_for("index"))
 
 @app.route("/export")
+@login_required
 def export_csv():
     connection = get_db_connection()
     products = connection.execute("SELECT * FROM products").fetchall()
