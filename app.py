@@ -1,5 +1,7 @@
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, Response       
+import csv
+import io
 
 app = Flask(__name__)
 app.secret_key = "inventory_secret_key"
@@ -254,6 +256,54 @@ def update_stock(product_id):
 
     flash("Stock quantity updated successfully.", "success")
     return redirect(url_for("index"))
+
+@app.route("/export")
+def export_csv():
+    connection = get_db_connection()
+    products = connection.execute("SELECT * FROM products").fetchall()
+    connection.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "ID",
+        "Product Name",
+        "Category",
+        "Quantity",
+        "Threshold",
+        "Price",
+        "Barcode",
+        "Status"
+    ])
+
+    for product in products:
+        if product["quantity"] == 0:
+            status = "Out of Stock"
+        elif product["quantity"] < product["threshold"]:
+            status = "Low Stock"
+        else:
+            status = "In Stock"
+
+        writer.writerow([
+            product["id"],
+            product["name"],
+            product["category"],
+            product["quantity"],
+            product["threshold"],
+            product["price"],
+            product["barcode"],
+            status
+        ])
+
+    response = Response(
+        output.getvalue(),
+        mimetype="text/csv"
+    )
+
+    response.headers["Content-Disposition"] = "attachment; filename=inventory_report.csv"
+
+    return response
 
 if __name__ == "__main__":
     init_db()
